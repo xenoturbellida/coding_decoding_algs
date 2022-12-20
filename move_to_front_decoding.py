@@ -1,11 +1,11 @@
-from bwt_decoding import find_orig_sequence
+from bwt_decoding import find_orig_sequence, check_if_pos_is_valid
 
 
 FILENAME_INPUT = 'move_to_front.conf'
 LETTERS = 'letters'
 CODE_WORDS = 'code_words'
-FROM_BINARY_MODE = 1
-FROM_ORDERS_MODE = 2
+FROM_ORDERS_MODE = 1
+FROM_BINARY_MODE = 2
 
 
 def make_letter_code_mapping():
@@ -58,8 +58,18 @@ def decode_from_alphabet_only(coding_line: [str], alph: [str]) -> [str]:
     decoded_line = []
     letters_buffer = alph[:]
     for code_word in coding_line:
-        ind_to_move = int(code_word)
-        letter = letters_buffer[ind_to_move]
+        try:
+            ind_to_move = int(code_word)
+        except ValueError:
+            print(f"'{code_word}' is not a number!")
+            return decoded_line
+
+        try:
+            letter = letters_buffer[ind_to_move]
+        except IndexError:
+            print(f"Incorrect serial number '{ind_to_move}'! Accepted values are [0, {len(alph) - 1}]")
+            return decoded_line
+
         decoded_line.append(letter)
         del letters_buffer[ind_to_move]
         letters_buffer.insert(0, letter)
@@ -69,23 +79,40 @@ def decode_from_alphabet_only(coding_line: [str], alph: [str]) -> [str]:
 
 if __name__ == '__main__':
 
-    print("Choose mode: 1 - from binary sequence, 2 - from orders' sequence")
-    mode = int(input())
+    print("Choose mode: 1 - from orders' sequence, 2 - from binary sequence")
+
+    try:
+        mode = int(input())
+    except ValueError:
+        print("Incorrect mode value. '1' was chosen as mode.")
+        mode = 1
 
     if mode == FROM_ORDERS_MODE:
         alphabet = make_alphabet()
         while True:
-            print("Enter binary sequence you want to decode, then position in BWT:")
-            sequence, pos = input().split(',')
+            print('Enter decimal sequence you want to decode, then position in BWT:')
+            user_input = input().split(',')
+            if len(user_input) < 2:
+                print("Enter position in BWT (separated by commas)!")
+                continue
+
+            sequence, pos = user_input[0].strip(), user_input[1].strip()
             coding_line_ = sequence.split(' ')
             transformed_seq = decode_from_alphabet_only(coding_line_, alphabet)
-            print('Result:')
-            print("".join(find_orig_sequence(transformed_seq, int(pos))))
+            transformed_seq_str = "".join(transformed_seq)
+            print("After move to front algorithm:")
+            print(transformed_seq_str)
+            if check_if_pos_is_valid(transformed_seq_str, pos):
+                print('After BWT:')
+                print("".join(find_orig_sequence(transformed_seq, int(pos))))
+            else:
+                print("Error! Position is not valid. Unable to apply BWT!")
+            print("-----------")
 
     elif mode == FROM_BINARY_MODE:
         coding_system_ = make_letter_code_mapping()
         while True:
-            print('Enter decimal sequence you want to decode, then position in BWT:')
+            print("Enter binary sequence you want to decode, then position in BWT:")
             sequence, pos = input().split(',')
             coding_line_ = separate_code_words(sequence, coding_system_[CODE_WORDS])
             transformed_seq = decode(coding_line_, coding_system_)
